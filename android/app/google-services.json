@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "372274440315",
+    "project_id": "cabbss-e6079",
+    "storage_bucket": "cabbss-e6079.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:372274440315:android:e7661a3dfb02fe5ef6dade",
+        "android_client_info": {
+          "package_name": "com.example.our_cabss"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGsIg4cXLbdOpeB9HNIi5spdyi9LBYz5c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
