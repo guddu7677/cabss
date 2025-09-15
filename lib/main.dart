@@ -30,24 +30,24 @@ class OurCabss extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(create: (context) => AppInfo(),
-    child: MaterialApp(
-      title: "Our Cabss",
-      theme: Mythemes.lightTheme,
-      darkTheme: Mythemes.darkTheme,
-      themeMode: ThemeMode.system,
-      debugShowCheckedModeBanner: false,
-      home: SearchPlacesScreen(),
-      routes: {
-        "/RegisterScreen": (context) => RegisterScreen(),
-        "/LoginScreen": (context) => LoginScreen(),
-        "/MainScreen": (context) => MainScreen(),
-        "/SplashScreen": (context) => SplashScreen(),
-        "/ForgetPasswordScreen": (context) => ForgetPasswordScreen(),
-                "/SearchPlacesScreen": (context) => SearchPlacesScreen(),
-
-      },
-    ),
+    return ChangeNotifierProvider(
+      create: (context) => AppInfo(),
+      child: MaterialApp(
+        title: "Our Cabss",
+        theme: Mythemes.lightTheme,
+        darkTheme: Mythemes.darkTheme,
+        themeMode: ThemeMode.system,
+        debugShowCheckedModeBanner: false,
+        home: SearchPlacesScreen(), // Changed from SearchPlacesScreen to SplashScreen
+        routes: {
+          "/RegisterScreen": (context) => RegisterScreen(),
+          "/LoginScreen": (context) => LoginScreen(),
+          "/MainScreen": (context) => MainScreen(),
+          "/SplashScreen": (context) => SplashScreen(),
+          "/ForgetPasswordScreen": (context) => ForgetPasswordScreen(),
+          "/SearchPlacesScreen": (context) => SearchPlacesScreen(),
+        },
+      ),
     );
   }
 }

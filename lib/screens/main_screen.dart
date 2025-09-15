@@ -75,6 +75,71 @@ class _MainPageState extends State<MainScreen> {
         );
   }
 
+  // Method to update map when drop-off location is selected
+  void updateMapWithDropOffLocation() async {
+    if (Provider.of<AppInfo>(context, listen: false).userDropOffLocation != null) {
+      var dropOffLocation = Provider.of<AppInfo>(context, listen: false).userDropOffLocation!;
+      
+      // Clear existing markers
+      markersSet.clear();
+      
+      // Add pickup location marker
+      if (Provider.of<AppInfo>(context, listen: false).userPickUpLocation != null) {
+        var pickupLocation = Provider.of<AppInfo>(context, listen: false).userPickUpLocation!;
+        markersSet.add(
+          Marker(
+            markerId: const MarkerId("pickupID"),
+            position: LatLng(pickupLocation.locationLatitude!, pickupLocation.locationLongitude!),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            infoWindow: InfoWindow(title: "Pickup Location", snippet: pickupLocation.locationName),
+          ),
+        );
+      }
+      
+      // Add drop-off location marker
+      markersSet.add(
+        Marker(
+          markerId: const MarkerId("dropOffID"),
+          position: LatLng(dropOffLocation.locationLatitude!, dropOffLocation.locationLongitude!),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(title: "Drop Off Location", snippet: dropOffLocation.locationName),
+        ),
+      );
+
+      if (Provider.of<AppInfo>(context, listen: false).userPickUpLocation != null) {
+        var pickupLocation = Provider.of<AppInfo>(context, listen: false).userPickUpLocation!;
+        
+        double minLat = pickupLocation.locationLatitude! < dropOffLocation.locationLatitude! 
+            ? pickupLocation.locationLatitude! : dropOffLocation.locationLatitude!;
+        double maxLat = pickupLocation.locationLatitude! > dropOffLocation.locationLatitude! 
+            ? pickupLocation.locationLatitude! : dropOffLocation.locationLatitude!;
+        double minLng = pickupLocation.locationLongitude! < dropOffLocation.locationLongitude! 
+            ? pickupLocation.locationLongitude! : dropOffLocation.locationLongitude!;
+        double maxLng = pickupLocation.locationLongitude! > dropOffLocation.locationLongitude! 
+            ? pickupLocation.locationLongitude! : dropOffLocation.locationLongitude!;
+
+        LatLngBounds bounds = LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        );
+
+        newGoogleMapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 100.0),
+        );
+      } else {
+        CameraPosition cameraPosition = CameraPosition(
+          target: LatLng(dropOffLocation.locationLatitude!, dropOffLocation.locationLongitude!),
+          zoom: 14,
+        );
+        newGoogleMapController!.animateCamera(
+          CameraUpdate.newCameraPosition(cameraPosition),
+        );
+      }
+
+      setState(() {});
+    }
+  }
+
   getAddressFromLatLng() async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -112,7 +177,7 @@ class _MainPageState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-        darkTheme = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    darkTheme = MediaQuery.of(context).platformBrightness == Brightness.dark;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -175,7 +240,7 @@ class _MainPageState extends State<MainScreen> {
                         child: Column(
                           children: [
                             Padding(
-                              padding:  EdgeInsets.all(5.0),
+                              padding: EdgeInsets.all(5.0),
                               child: Row(
                                 children: [
                                   Icon(
@@ -184,7 +249,7 @@ class _MainPageState extends State<MainScreen> {
                                         ? Colors.amber.shade400
                                         : Colors.blue,
                                   ),
-                                   SizedBox(width: 10),
+                                  SizedBox(width: 10),
                                   Text(
                                     "From",
                                     style: TextStyle(
@@ -195,27 +260,40 @@ class _MainPageState extends State<MainScreen> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  Text(
-                                    Provider.of<AppInfo>(
-                                              context,
-                                            ).userPickUpLocation !=
-                                            null
-                                        ? (Provider.of<AppInfo>(context)
-                                                      .userPickUpLocation!
-                                                      .locationName!)
-                                                  .substring(0, 30) +
-                                              "..."
-                                        : "adress not found",
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Text(
+                                      Provider.of<AppInfo>(
+                                                    context,
+                                                  ).userPickUpLocation !=
+                                                  null
+                                          ? (Provider.of<AppInfo>(context)
+                                                        .userPickUpLocation!
+                                                        .locationName!)
+                                                    .substring(0, 
+                                                      Provider.of<AppInfo>(context)
+                                                        .userPickUpLocation!
+                                                        .locationName!.length > 30 
+                                                          ? 30 
+                                                          : Provider.of<AppInfo>(context)
+                                                              .userPickUpLocation!
+                                                              .locationName!.length) +
+                                                (Provider.of<AppInfo>(context)
+                                                        .userPickUpLocation!
+                                                        .locationName!.length > 30 
+                                                    ? "..." 
+                                                    : "")
+                                          : "address not found",
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            SizedBox(width: 5),
+                            SizedBox(height: 5),
                             Divider(
                               height: 1,
                               thickness: 2,
@@ -223,11 +301,20 @@ class _MainPageState extends State<MainScreen> {
                                   ? Colors.amber.shade400
                                   : Colors.blue,
                             ),
-                            SizedBox(width: 10),
+                            SizedBox(height: 10),
                             Padding(
                               padding: EdgeInsets.all(5.0),
                               child: GestureDetector(
-                                onTap: () {},
+                                onTap: () async {
+                                  var responseFromSearchScreen = await Navigator.pushNamed(context, "/SearchPlacesScreen");
+                                  if (responseFromSearchScreen == "obtainedDropOff") {
+                                    setState(() {
+                                      openNavigationDrawer = false;
+                                    });
+                                    // Update the map with the new drop-off location
+                                    updateMapWithDropOffLocation();
+                                  }
+                                },
                                 child: Row(
                                   children: [
                                     Icon(
@@ -236,7 +323,7 @@ class _MainPageState extends State<MainScreen> {
                                           ? Colors.amber.shade400
                                           : Colors.blue,
                                     ),
-                                     SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Text(
                                       "To",
                                       style: TextStyle(
@@ -247,21 +334,21 @@ class _MainPageState extends State<MainScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    Text(
-                                      Provider.of<AppInfo>(
-                                                context,
-                                              ).userDropOffLocation !=
-                                              null
-                                          ? (Provider.of<AppInfo>(context)
-                                                        .userDropOffLocation!
-                                                        .locationName!)
-                                                    .substring(0, 30) +
-                                                "..."
-                                          : " where to?",
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                                    Expanded(
+                                      child: Text(
+                                        Provider.of<AppInfo>(
+                                                      context,
+                                                    ).userDropOffLocation !=
+                                                    null
+                                            ? (Provider.of<AppInfo>(context)
+                                                          .userDropOffLocation!
+                                                          .locationName!)
+                                            : " where to?",
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -276,36 +363,6 @@ class _MainPageState extends State<MainScreen> {
                 ),
               ),
             ),
-            // Positioned(
-            //   top: 40,
-            //   left: 20,
-            //   right: 20,
-            //   child: Container(
-            //     padding: const EdgeInsets.all(12),
-            //     decoration: BoxDecoration(
-            //       color: Colors.white,
-            //       borderRadius: BorderRadius.circular(5),
-            //       boxShadow: const [
-            //         BoxShadow(
-            //           color: Colors.black26,
-            //           blurRadius: 6,
-            //           spreadRadius: 0.5,
-            //           offset: Offset(0.7, 0.7),
-            //         ),
-            //       ],
-            //     ),
-            //     child: Text(
-            //        Provider.of<AppInfo>(context).userPickUpLocation != null
-            //         ? (Provider.of<AppInfo>(context)
-            //             .userPickUpLocation!
-            //             .locationName!).substring(  0, 30)+"..."
-            //         : "adress not found",
-            //       overflow: TextOverflow.ellipsis,
-            //       softWrap: true,
-            //       maxLines: 2,
-            //     ),
-            //   ),
-            // )
           ],
         ),
       ),

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:our_cabss/assistents/request_assistent.dart';
+import 'package:our_cabss/models/predicted_places.dart';
+import 'package:our_cabss/services/map_key.dart';
 import 'package:our_cabss/theme_provider/theme_provider.dart';
+import 'package:our_cabss/widgets/place_prediction_tile.dart';
 
 class SearchPlacesScreen extends StatefulWidget {
   const SearchPlacesScreen({super.key});
@@ -9,6 +13,37 @@ class SearchPlacesScreen extends StatefulWidget {
 }
 
 class _SearchPlacesScreenState extends State<SearchPlacesScreen> {
+  List<PredictedPlaces> placePredictionsList = [];
+  TextEditingController searchController = TextEditingController();
+
+  Future<void> findPlaceAutoCompleteSearch(String inputText) async {
+    if (inputText.length > 1) {
+      String UrlautoCompleteSearch="https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$inputText&key=$mapKey&components=country:in";
+
+      var responceAuroCompleteSearch = await RequestAssistant.receiveRequest(UrlautoCompleteSearch);
+      if(responceAuroCompleteSearch == "Error Occurred, Failed. No Response."){
+        return;
+      }
+      if (responceAuroCompleteSearch["status"] == "OK") {
+        var placePredictions = responceAuroCompleteSearch["predictions"];
+        var placePredictionsList = (placePredictions as List).map((jsonData) => PredictedPlaces.fromJson(jsonData)).toList();
+        setState(() {
+          this.placePredictionsList = placePredictionsList;
+        });
+      }
+    } else {
+      setState(() {
+        placePredictionsList.clear();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -25,8 +60,9 @@ class _SearchPlacesScreenState extends State<SearchPlacesScreen> {
           title: Text(
             "Search & Set Drop Off location",
             style: TextStyle(
-              color: theme.appBarTheme.foregroundColor ?? 
-                     (isDark ? Colors.white : Colors.white),
+              color:
+                  theme.appBarTheme.foregroundColor ??
+                  (isDark ? Colors.amber.shade400 : Colors.blue),
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -35,8 +71,9 @@ class _SearchPlacesScreenState extends State<SearchPlacesScreen> {
           leading: GestureDetector(
             child: Icon(
               Icons.arrow_back,
-              color: theme.appBarTheme.foregroundColor ?? 
-                     (isDark ? Colors.white : Colors.white),
+              color:
+                  theme.appBarTheme.foregroundColor ??
+                  (isDark ? Colors.amber.shade400 : Colors.blue),
             ),
             onTap: () {
               Navigator.pop(context);
@@ -47,7 +84,7 @@ class _SearchPlacesScreenState extends State<SearchPlacesScreen> {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: theme.cardColor,
+                color:isDark ? Colors.amber.shade400: Colors.blue,
                 boxShadow: [
                   BoxShadow(
                     color: isDark ? Colors.black54 : Colors.grey,
@@ -57,7 +94,70 @@ class _SearchPlacesScreenState extends State<SearchPlacesScreen> {
                   ),
                 ],
               ),
-            )
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(width: 10),
+                        Icon(
+                          Icons.adjust_sharp,
+                          color: isDark ? Colors.grey[300] : Colors.grey,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            onChanged: (value) {
+                              findPlaceAutoCompleteSearch(value);
+                            },
+                            decoration: InputDecoration(
+                              hintText: "Search here...",
+                              hintStyle: TextStyle(
+                                color: isDark ? Colors.blue: Colors.grey,
+                              ),
+                              filled: true,
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.only(
+                                left: 15,
+                                top: 8,
+                                bottom: 8,
+                              ),
+                            ),
+                          ),
+                        ),
+                         SizedBox(width: 10),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 5,),
+            (placePredictionsList.length > 0)
+                ? Expanded(
+                    child: ListView.separated(
+                      physics: ClampingScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        return PlacePredictionTileDesion(
+                          predictedPlaces: placePredictionsList[index],
+                        );
+                      },
+                      itemCount: placePredictionsList.length,
+                      separatorBuilder: (BuildContext context, int index) {
+                        return Padding(
+                          padding:  EdgeInsets.all(4.0),
+                          child: Divider(
+                            height: 1,
+                            color: isDark ? Colors.amber.shade400 : Colors.blue,
+                            thickness: 1,
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                : Container(),
           ],
         ),
       ),

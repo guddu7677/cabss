@@ -1,37 +1,18 @@
-import 'package:flutter/material.dart';
+// Add this method to your AppInfo class
+import 'package:flutter/foundation.dart';
 import 'package:our_cabss/models/direction.dart';
 
 class AppInfo extends ChangeNotifier {
-  Directions? userDropOffLocation;
   Directions? userPickUpLocation;
-  int? countTotalTrips = 0;
-  // List<String> historyTripsKeys = [];
-  // List<TripHistoryModel> allTripsHistoryInformation = [];
+  Directions? userDropOffLocation;
 
-void UpdatePickUpLocationAddress(Directions userPickUpAddress) {
+  void updatePickUpLocationAddress(Directions userPickUpAddress) {
     userPickUpLocation = userPickUpAddress;
     notifyListeners();
   }
 
-  void UpdateDropOffLocationAddress(Directions userDropOffAddress) {
-    userDropOffLocation = userDropOffAddress;
+  void updateDropOffLocationAddress(Directions dropOffAddress) {
+    userDropOffLocation = dropOffAddress;
     notifyListeners();
   }
-
-  void updateTotalTripsCounter(int totalTrips) {
-    countTotalTrips = totalTrips;
-    notifyListeners();
-  }
-
-  // void updateTripKeys(List<String> tripKeys) {
-  //   historyTripsKeys = tripKeys;
-  //   notifyListeners();
-  // }
-
-  // void updateAllTripsHistoryInformation(
-  //     List<TripHistoryModel> allTripsHistory) {
-  //   allTripsHistoryInformation = allTripsHistory;
-  //   notifyListeners();
-  // }
-
 }

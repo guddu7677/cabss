@@ -35,10 +35,10 @@ class AssistentMethod {
       humanReadableAddress = requestResponse["results"][0]["formatted_address"];
       Directions userPickUpAddress = Directions();
       userPickUpAddress.locationLatitude = position.latitude;
-      userPickUpAddress.locationlongitude = position.longitude;
+      userPickUpAddress.locationLongitude = position.longitude;
       userPickUpAddress.locationName = humanReadableAddress;
       Provider.of<AppInfo>(context, listen: false)
-          .UpdatePickUpLocationAddress(userPickUpAddress);
+          .updatePickUpLocationAddress(userPickUpAddress);
     }
     return humanReadableAddress;
   }
