@@ -52,6 +52,7 @@ dependencies:
   location: ^8.0.1
   http: ^1.5.0
   geocoding: ^2.2.2
+  flutter_polyline_points: ^3.0.1
 
 dev_dependencies:
   flutter_test:

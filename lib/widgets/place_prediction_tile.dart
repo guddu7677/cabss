@@ -9,9 +9,15 @@ import 'package:provider/provider.dart';
 class PlacePredictionTileDesion extends StatelessWidget {
   final PredictedPlaces? predictedPlaces;
 
-  const PlacePredictionTileDesion({Key? key, this.predictedPlaces}) : super(key: key);
+  const PlacePredictionTileDesion({
+    Key? key, 
+    this.predictedPlaces,
+  }) : super(key: key);
 
-  getPlaceDirectionDetails(String? placeId, BuildContext context) async {
+  Future<void> getPlaceDirectionDetails(String? placeId, BuildContext context) async {
+    if (placeId == null) return;
+
+    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -20,89 +26,90 @@ class PlacePredictionTileDesion extends StatelessWidget {
       ),
     );
 
-    String placeDirectionsDetailsUrl = 
-        "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$mapKey";
+    try {
+      String placeDirectionsDetailsUrl = 
+          "https://maps.googleapis.com/maps/api/place/details/json?"
+          "place_id=$placeId&key=$mapKey";
 
-    var responseApi = await RequestAssistant.receiveRequest(placeDirectionsDetailsUrl);
+      var responseApi = await RequestAssistant.receiveRequest(placeDirectionsDetailsUrl);
 
-    Navigator.pop(context); // Close loading dialog
+      // Close loading dialog
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
 
-    if (responseApi == "Error Occurred, Failed. No Response.") {
-      return;
+      if (responseApi == "Error Occurred, Failed. No Response.") {
+        _showErrorSnackBar(context, "Failed to get place details");
+        return;
+      }
+
+      if (responseApi["status"] == "OK") {
+        Directions directions = Directions();
+        directions.locationId = placeId;
+        directions.locationName = responseApi["result"]["name"];
+        directions.locationLatitude = responseApi["result"]["geometry"]["location"]["lat"];
+        directions.locationLongitude = responseApi["result"]["geometry"]["location"]["lng"];
+
+        Provider.of<AppInfo>(context, listen: false)
+            .updateDropOffLocationAddress(directions);
+
+        Navigator.pop(context, "obtainedDropOff");
+      } else {
+        _showErrorSnackBar(context, "Place not found");
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      _showErrorSnackBar(context, "Error getting place details");
+      print("Error getting place details: $e");
     }
+  }
 
-    if (responseApi["status"] == "OK") {
-      Directions directions = Directions();
-      directions.locationId = placeId;
-      directions.locationName = responseApi["result"]["name"];
-      directions.locationLatitude = responseApi["result"]["geometry"]["location"]["lat"];
-      directions.locationLongitude = responseApi["result"]["geometry"]["location"]["lng"];
-
-      Provider.of<AppInfo>(context, listen: false).updateDropOffLocationAddress(directions);
-
-      Navigator.pop(context, "obtainedDropOff");
-    }
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     bool darkTheme = MediaQuery.of(context).platformBrightness == Brightness.dark;
 
-    return ElevatedButton(
-      onPressed: () {
-        getPlaceDirectionDetails(predictedPlaces!.placeId, context);
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: darkTheme ? Colors.grey.shade800 : Colors.white,
-        elevation: 0,
-        padding: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      elevation: 2,
+      child: ListTile(
+        onTap: () {
+          getPlaceDirectionDetails(predictedPlaces?.placeId, context);
+        },
+        leading: Icon(
+          Icons.add_location,
+          color: darkTheme ? Colors.amber.shade400 : Colors.blue,
+          size: 24,
         ),
-      ),
-      child: Container(
-        padding:  EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            Icon(
-              Icons.add_location,
-              color: darkTheme ? Colors.amber.shade400 : Colors.blue,
-              size: 24,
-            ),
-             SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    predictedPlaces!.mainText ?? "",
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: darkTheme ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    predictedPlaces!.secondaryText ?? "",
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: darkTheme ? Colors.grey.shade400 : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: darkTheme ? Colors.grey.shade400 : Colors.grey.shade600,
-              size: 16,
-            ),
-          ],
+        title: Text(
+          predictedPlaces?.mainText ?? "Unknown Place",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: darkTheme ? Colors.white : Colors.black87,
+          ),
+        ),
+        subtitle: predictedPlaces?.secondaryText != null
+            ? Text(
+                predictedPlaces!.secondaryText!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: darkTheme ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
+              )
+            : null,
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          color: darkTheme ? Colors.grey.shade400 : Colors.grey.shade600,
+          size: 16,
         ),
       ),
     );

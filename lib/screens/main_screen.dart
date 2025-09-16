@@ -1,173 +1,39 @@
 import 'dart:async';
-import 'dart:developer';
-import 'package:geolocator/geolocator.dart';
-import 'package:location/location.dart' as log;
-
 import 'package:flutter/material.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:our_cabss/assistents/assistent_method.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:our_cabss/infoHandler/app_info.dart';
+import 'package:our_cabss/models/direction_details_info.dart';
+import 'package:our_cabss/services/auth_serviece.dart';
+import 'package:our_cabss/widgets/progress_dilog.dart';
 import 'package:provider/provider.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainPageState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainPageState extends State<MainScreen> {
-  LatLng? pickedLocation;
-  log.Location location = log.Location();
-  String? address;
-  bool darkTheme = false;
-
+class _MainScreenState extends State<MainScreen> {
   final Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController? newGoogleMapController;
+  String? userName = "";
+  String? userEmail = "";
+
   static const CameraPosition _kGooglePlex = CameraPosition(
-    target: LatLng(37.42796133580664, -122.085749655962),
-    zoom: 14.4746,
+    target: LatLng(25.5941, 85.1376),
+    zoom: 14.0,
   );
-  GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
-  double searchLocationContainerHeight = 220.0;
-  double waitingResponseContainerHeight = 0.0;
-  double assignedDriverInfoContainerHeight = 0.0;
 
   Position? userCurrentPosition;
-  var geoLocator = Geolocator();
   LocationPermission? _locationPermission;
-  double bottomPaddingOfMap = 0;
-
-  List<LatLng> pLineCoordinates = [];
-  Set<Polyline> polylineSet = {};
   Set<Marker> markersSet = {};
-  Set<Circle> circlesSet = {};
-
-  bool openNavigationDrawer = true;
-  bool activeNearbyDriverKeysLoaded = false;
-
-  BitmapDescriptor? activeNearbyIcon;
-
-  locateUserposition() async {
-    Position cposition = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-    userCurrentPosition = cposition;
-
-    LatLng latLatPosition = LatLng(
-      userCurrentPosition!.latitude,
-      userCurrentPosition!.longitude,
-    );
-
-    CameraPosition cameraPosition = CameraPosition(
-      target: latLatPosition,
-      zoom: 14,
-    );
-    newGoogleMapController!.animateCamera(
-      CameraUpdate.newCameraPosition(cameraPosition),
-    );
-
-    String humanReadableAddress =
-        await AssistentMethod.searchAddressForGeographicCoordinated(
-          userCurrentPosition!,
-          context,
-        );
-  }
-
-  // Method to update map when drop-off location is selected
-  void updateMapWithDropOffLocation() async {
-    if (Provider.of<AppInfo>(context, listen: false).userDropOffLocation != null) {
-      var dropOffLocation = Provider.of<AppInfo>(context, listen: false).userDropOffLocation!;
-      
-      // Clear existing markers
-      markersSet.clear();
-      
-      // Add pickup location marker
-      if (Provider.of<AppInfo>(context, listen: false).userPickUpLocation != null) {
-        var pickupLocation = Provider.of<AppInfo>(context, listen: false).userPickUpLocation!;
-        markersSet.add(
-          Marker(
-            markerId: const MarkerId("pickupID"),
-            position: LatLng(pickupLocation.locationLatitude!, pickupLocation.locationLongitude!),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-            infoWindow: InfoWindow(title: "Pickup Location", snippet: pickupLocation.locationName),
-          ),
-        );
-      }
-      
-      // Add drop-off location marker
-      markersSet.add(
-        Marker(
-          markerId: const MarkerId("dropOffID"),
-          position: LatLng(dropOffLocation.locationLatitude!, dropOffLocation.locationLongitude!),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: InfoWindow(title: "Drop Off Location", snippet: dropOffLocation.locationName),
-        ),
-      );
-
-      if (Provider.of<AppInfo>(context, listen: false).userPickUpLocation != null) {
-        var pickupLocation = Provider.of<AppInfo>(context, listen: false).userPickUpLocation!;
-        
-        double minLat = pickupLocation.locationLatitude! < dropOffLocation.locationLatitude! 
-            ? pickupLocation.locationLatitude! : dropOffLocation.locationLatitude!;
-        double maxLat = pickupLocation.locationLatitude! > dropOffLocation.locationLatitude! 
-            ? pickupLocation.locationLatitude! : dropOffLocation.locationLatitude!;
-        double minLng = pickupLocation.locationLongitude! < dropOffLocation.locationLongitude! 
-            ? pickupLocation.locationLongitude! : dropOffLocation.locationLongitude!;
-        double maxLng = pickupLocation.locationLongitude! > dropOffLocation.locationLongitude! 
-            ? pickupLocation.locationLongitude! : dropOffLocation.locationLongitude!;
-
-        LatLngBounds bounds = LatLngBounds(
-          southwest: LatLng(minLat, minLng),
-          northeast: LatLng(maxLat, maxLng),
-        );
-
-        newGoogleMapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, 100.0),
-        );
-      } else {
-        CameraPosition cameraPosition = CameraPosition(
-          target: LatLng(dropOffLocation.locationLatitude!, dropOffLocation.locationLongitude!),
-          zoom: 14,
-        );
-        newGoogleMapController!.animateCamera(
-          CameraUpdate.newCameraPosition(cameraPosition),
-        );
-      }
-
-      setState(() {});
-    }
-  }
-
-  getAddressFromLatLng() async {
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        pickedLocation!.latitude,
-        pickedLocation!.longitude,
-      );
-
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        setState(() {
-          address =
-              "${place.name}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
-        });
-      }
-    } catch (e) {
-      print("Error getting address: $e");
-      setState(() {
-        address = "Address not found";
-      });
-    }
-  }
-
-  checkIfLocationPermissionAllowed() async {
-    _locationPermission = await Geolocator.requestPermission();
-    if (_locationPermission == LocationPermission.denied) {
-      _locationPermission = await Geolocator.requestPermission();
-    }
-  }
+  bool darkTheme = false;
+  List<LatLng> polyLineCoordinatesList = [];
+  Set<Polyline> polyLineSet = {};
 
   @override
   void initState() {
@@ -176,193 +42,437 @@ class _MainPageState extends State<MainScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      updateMapWithLocations();
+    });
+  }
+
+  Future<void> checkIfLocationPermissionAllowed() async {
+    _locationPermission = await Geolocator.checkPermission();
+    if (_locationPermission == LocationPermission.denied) {
+      _locationPermission = await Geolocator.requestPermission();
+    }
+
+    if (_locationPermission == LocationPermission.whileInUse ||
+        _locationPermission == LocationPermission.always) {
+      locateUserPosition();
+    }
+  }
+
+  Future<void> locateUserPosition() async {
+    try {
+      Position cPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      userCurrentPosition = cPosition;
+
+      LatLng latLngPosition = LatLng(
+        userCurrentPosition!.latitude,
+        userCurrentPosition!.longitude,
+      );
+
+      CameraPosition cameraPosition = CameraPosition(
+        target: latLngPosition,
+        zoom: 14,
+      );
+
+      if (newGoogleMapController != null) {
+        newGoogleMapController!.animateCamera(
+          CameraUpdate.newCameraPosition(cameraPosition),
+        );
+      }
+
+      await AssistentMethod.searchAddressForGeographicCoordinated(
+        userCurrentPosition!,
+        context,
+      );
+      
+      // Safe null check for user info
+      if (userModelCurrentInfo != null) {
+        userName = userModelCurrentInfo!.name ?? "";
+        userEmail = userModelCurrentInfo!.email ?? "";
+      }
+    } catch (e) {
+      print("Error getting location: $e");
+    }
+  }
+
+  Future<void> drawPolyLineFromOriginToDestination(bool darkTheme) async {
+    var appInfo = Provider.of<AppInfo>(context, listen: false);
+    var originPosition = appInfo.userPickUpLocation;
+    var destinationPosition = appInfo.userDropOffLocation;
+
+    // Check if both locations are available
+    if (originPosition == null || destinationPosition == null) {
+      print("Origin or destination position is null");
+      return;
+    }
+
+    var originLatLng = LatLng(
+      originPosition.locationLatitude!,
+      originPosition.locationLongitude!,
+    );
+    var destinationLatLng = LatLng(
+      destinationPosition.locationLatitude!,
+      destinationPosition.locationLongitude!,
+    );
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => ProgressDilog(message: "Please wait..."),
+    );
+
+    try {
+      var directionDetailsInfo =
+          await AssistentMethod.obtainOriginToDestinationDirectionDetails(
+        originLatLng,
+        destinationLatLng,
+      );
+
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      if (directionDetailsInfo == null) {
+        print("Failed to get direction details");
+        return;
+      }
+
+      setState(() {
+        tripDirectionDetailsInfo = directionDetailsInfo;
+      });
+
+      PolylinePoints pPoints = PolylinePoints(apiKey: 'AIzaSyCeUvUpxCAYciJZ4blCtMm7snAM8ODvmg4');
+      List<PointLatLng> decodedPolyLinePointsResultList =
+          PolylinePoints.decodePolyline(directionDetailsInfo.encodedPoints!);
+
+      polyLineCoordinatesList.clear();
+      
+      if (decodedPolyLinePointsResultList.isNotEmpty) {
+        for (var pointLatLng in decodedPolyLinePointsResultList) {
+          polyLineCoordinatesList
+              .add(LatLng(pointLatLng.latitude, pointLatLng.longitude));
+        }
+      }
+
+      markersSet.clear();
+      polyLineSet.clear();
+
+      Marker originMarker = Marker(
+        markerId: const MarkerId("originID"),
+        position: originLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: InfoWindow(
+          title: originPosition.locationName!,
+          snippet: "Origin",
+        ),
+      );
+
+      Marker destinationMarker = Marker(
+        markerId: const MarkerId("destinationID"),
+        position: destinationLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: InfoWindow(
+          title: destinationPosition.locationName!,
+          snippet: "Destination",
+        ),
+      );
+
+      Polyline polyline = Polyline(
+        color: darkTheme ? Colors.amber : Colors.blue,
+        polylineId: const PolylineId("PolylineID"),
+        jointType: JointType.round,
+        points: polyLineCoordinatesList,
+        width: 5,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        geodesic: true,
+      );
+
+      setState(() {
+        markersSet.add(originMarker);
+        markersSet.add(destinationMarker);
+        polyLineSet.add(polyline);
+      });
+
+      _fitMarkersInCamera(originLatLng, destinationLatLng);
+
+    } catch (e) {
+      print("Error drawing polyline: $e");
+      // Close loading dialog if still open
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  void _fitMarkersInCamera(LatLng originLatLng, LatLng destinationLatLng) {
+    LatLngBounds bounds;
+    
+    if (originLatLng.latitude > destinationLatLng.latitude &&
+        originLatLng.longitude > destinationLatLng.longitude) {
+      bounds = LatLngBounds(
+        southwest: destinationLatLng,
+        northeast: originLatLng,
+      );
+    } else if (originLatLng.longitude > destinationLatLng.longitude) {
+      bounds = LatLngBounds(
+        southwest: LatLng(originLatLng.latitude, destinationLatLng.longitude),
+        northeast: LatLng(destinationLatLng.latitude, originLatLng.longitude),
+      );
+    } else if (originLatLng.latitude > destinationLatLng.latitude) {
+      bounds = LatLngBounds(
+        southwest: LatLng(destinationLatLng.latitude, originLatLng.longitude),
+        northeast: LatLng(originLatLng.latitude, destinationLatLng.longitude),
+      );
+    } else {
+      bounds = LatLngBounds(
+        southwest: originLatLng,
+        northeast: destinationLatLng,
+      );
+    }
+
+    if (newGoogleMapController != null) {
+      newGoogleMapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, 70),
+      );
+    }
+  }
+
+  void updateMapWithLocations() {
+    var appInfo = Provider.of<AppInfo>(context, listen: false);
+
+    if (newGoogleMapController == null) return;
+
+    if (polyLineSet.isEmpty) {
+      markersSet.clear();
+
+      if (appInfo.userPickUpLocation != null) {
+        var pickupLocation = appInfo.userPickUpLocation!;
+        markersSet.add(
+          Marker(
+            markerId: const MarkerId("pickupID"),
+            position: LatLng(
+              pickupLocation.locationLatitude!,
+              pickupLocation.locationLongitude!,
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            infoWindow: InfoWindow(
+              title: "Pickup Location",
+              snippet: pickupLocation.locationName,
+            ),
+          ),
+        );
+      }
+
+      if (appInfo.userDropOffLocation != null) {
+        var dropOffLocation = appInfo.userDropOffLocation!;
+        markersSet.add(
+          Marker(
+            markerId: const MarkerId("dropOffID"),
+            position: LatLng(
+              dropOffLocation.locationLatitude!,
+              dropOffLocation.locationLongitude!,
+            ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            infoWindow: InfoWindow(
+              title: "Drop Off Location",
+              snippet: dropOffLocation.locationName,
+            ),
+          ),
+        );
+
+        if (appInfo.userPickUpLocation != null) {
+          _fitBothLocations(appInfo.userPickUpLocation!, dropOffLocation);
+        } else {
+          _focusOnLocation(dropOffLocation);
+        }
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  void _fitBothLocations(var pickup, var dropOff) {
+    double minLat = pickup.locationLatitude < dropOff.locationLatitude
+        ? pickup.locationLatitude
+        : dropOff.locationLatitude;
+    double maxLat = pickup.locationLatitude > dropOff.locationLatitude
+        ? pickup.locationLatitude
+        : dropOff.locationLatitude;
+    double minLng = pickup.locationLongitude < dropOff.locationLongitude
+        ? pickup.locationLongitude
+        : dropOff.locationLongitude;
+    double maxLng = pickup.locationLongitude > dropOff.locationLongitude
+        ? pickup.locationLongitude
+        : dropOff.locationLongitude;
+
+    LatLngBounds bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+
+    if (newGoogleMapController != null) {
+      newGoogleMapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, 100.0),
+      );
+    }
+  }
+
+  void _focusOnLocation(var location) {
+    CameraPosition cameraPosition = CameraPosition(
+      target: LatLng(location.locationLatitude!, location.locationLongitude!),
+      zoom: 14,
+    );
+
+    if (newGoogleMapController != null) {
+      newGoogleMapController!.animateCamera(
+        CameraUpdate.newCameraPosition(cameraPosition),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     darkTheme = MediaQuery.of(context).platformBrightness == Brightness.dark;
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        body: Stack(
-          children: [
-            GoogleMap(
-              padding: EdgeInsets.only(bottom: bottomPaddingOfMap),
-              mapType: MapType.normal,
-              myLocationButtonEnabled: true,
-              initialCameraPosition: _kGooglePlex,
-              myLocationEnabled: true,
-              zoomGesturesEnabled: true,
-              zoomControlsEnabled: true,
-              polylines: polylineSet,
-              markers: markersSet,
-              circles: circlesSet,
-              onMapCreated: (GoogleMapController controller) {
-                _controllerGoogleMap.complete(controller);
-                newGoogleMapController = controller;
-                setState(() {});
-                locateUserposition();
-              },
-              onCameraMove: (CameraPosition position) {
-                if (pickedLocation != position.target) {
-                  setState(() {
-                    pickedLocation = position.target;
-                  });
-                }
-              },
-              onCameraIdle: () {
-                getAddressFromLatLng();
-              },
-            ),
-            const Align(
-              alignment: Alignment.center,
-              child: Icon(Icons.location_on, color: Colors.red, size: 30),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: darkTheme ? Colors.black54 : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: darkTheme
-                              ? Colors.grey.shade900
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(5.0),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on_outlined,
-                                    color: darkTheme
-                                        ? Colors.amber.shade400
-                                        : Colors.blue,
-                                  ),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    "From",
-                                    style: TextStyle(
-                                      color: darkTheme
-                                          ? Colors.amber.shade400
-                                          : Colors.blue,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      Provider.of<AppInfo>(
-                                                    context,
-                                                  ).userPickUpLocation !=
-                                                  null
-                                          ? (Provider.of<AppInfo>(context)
-                                                        .userPickUpLocation!
-                                                        .locationName!)
-                                                    .substring(0, 
-                                                      Provider.of<AppInfo>(context)
-                                                        .userPickUpLocation!
-                                                        .locationName!.length > 30 
-                                                          ? 30 
-                                                          : Provider.of<AppInfo>(context)
-                                                              .userPickUpLocation!
-                                                              .locationName!.length) +
-                                                (Provider.of<AppInfo>(context)
-                                                        .userPickUpLocation!
-                                                        .locationName!.length > 30 
-                                                    ? "..." 
-                                                    : "")
-                                          : "address not found",
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 5),
-                            Divider(
-                              height: 1,
-                              thickness: 2,
-                              color: darkTheme
-                                  ? Colors.amber.shade400
-                                  : Colors.blue,
-                            ),
-                            SizedBox(height: 10),
-                            Padding(
-                              padding: EdgeInsets.all(5.0),
-                              child: GestureDetector(
-                                onTap: () async {
-                                  var responseFromSearchScreen = await Navigator.pushNamed(context, "/SearchPlacesScreen");
-                                  if (responseFromSearchScreen == "obtainedDropOff") {
-                                    setState(() {
-                                      openNavigationDrawer = false;
-                                    });
-                                    // Update the map with the new drop-off location
-                                    updateMapWithDropOffLocation();
-                                  }
-                                },
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on_outlined,
-                                      color: darkTheme
-                                          ? Colors.amber.shade400
-                                          : Colors.blue,
-                                    ),
-                                    SizedBox(width: 10),
-                                    Text(
-                                      "To",
-                                      style: TextStyle(
-                                        color: darkTheme
-                                            ? Colors.amber.shade400
-                                            : Colors.blue,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        Provider.of<AppInfo>(
-                                                      context,
-                                                    ).userDropOffLocation !=
-                                                    null
-                                            ? (Provider.of<AppInfo>(context)
-                                                          .userDropOffLocation!
-                                                          .locationName!)
-                                            : " where to?",
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          GoogleMap(
+            mapType: MapType.normal,
+            myLocationButtonEnabled: true,
+            initialCameraPosition: _kGooglePlex,
+            myLocationEnabled: true,
+            zoomGesturesEnabled: true,
+            zoomControlsEnabled: true,
+            markers: markersSet,
+            polylines: polyLineSet, 
+            onMapCreated: (GoogleMapController controller) {
+              _controllerGoogleMap.complete(controller);
+              newGoogleMapController = controller;
+              locateUserPosition();
+            },
+          ),
+
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: darkTheme ? Colors.black87 : Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
                 ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildLocationRow(
+                    icon: Icons.my_location,
+                    label: "From",
+                    address: Provider.of<AppInfo>(context)
+                            .userPickUpLocation
+                            ?.locationName ??
+                        "Getting current location...",
+                    onTap: null,
+                  ),
+
+                  const SizedBox(height: 8),
+                  Divider(
+                    color: darkTheme ? Colors.amber.shade400 : Colors.blue,
+                    thickness: 1,
+                  ),
+                  const SizedBox(height: 8),
+
+                  _buildLocationRow(
+                    icon: Icons.location_on,
+                    label: "To",
+                    address: Provider.of<AppInfo>(context)
+                            .userDropOffLocation
+                            ?.locationName ??
+                        "Where to?",
+                    onTap: () async {
+                      var result = await Navigator.pushNamed(
+                        context,
+                        "/SearchPlacesScreen",
+                      );
+                      if (result == "obtainedDropOff") {
+                        updateMapWithLocations();
+                        await drawPolyLineFromOriginToDestination(darkTheme);
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationRow({
+    required IconData icon,
+    required String label,
+    required String address,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: darkTheme ? Colors.grey.shade800 : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: darkTheme ? Colors.amber.shade400 : Colors.blue,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                color: darkTheme ? Colors.amber.shade400 : Colors.blue,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                address.length > 40
+                    ? "${address.substring(0, 40)}..."
+                    : address,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              ),
+            ),
+            if (onTap != null)
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.grey.shade400,
+                size: 16,
+              ),
           ],
         ),
       ),

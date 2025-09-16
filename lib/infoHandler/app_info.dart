@@ -1,4 +1,3 @@
-// Add this method to your AppInfo class
 import 'package:flutter/foundation.dart';
 import 'package:our_cabss/models/direction.dart';
 
@@ -11,8 +10,13 @@ class AppInfo extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateDropOffLocationAddress(Directions dropOffAddress) {
-    userDropOffLocation = dropOffAddress;
+  void updateDropOffLocationAddress(Directions userDropOffLocationAddress) {
+    userDropOffLocation = userDropOffLocationAddress;
+    notifyListeners();
+  }
+
+  void clearDropOffLocation() {
+    userDropOffLocation = null;
     notifyListeners();
   }
 }
