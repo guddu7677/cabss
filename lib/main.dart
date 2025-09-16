@@ -1,7 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:our_cabss/infoHandler/app_info.dart';
+import 'package:our_cabss/screens/login_screen.dart';
 import 'package:our_cabss/screens/main_screen.dart';
+import 'package:our_cabss/screens/register_screen.dart';
 import 'package:our_cabss/screens/search_places_screen.dart';
 import 'package:our_cabss/splash_screen/splash_screen.dart';
 import 'package:provider/provider.dart';
@@ -39,11 +41,13 @@ class OurCabss extends StatelessWidget {
         ),
         themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
-        home: const SplashScreen(),
+        home: const RegisterScreen(),
         routes: {
           "/MainScreen": (context) => const MainScreen(),
           "/SearchPlacesScreen": (context) => const SearchPlacesScreen(),
           "/SplashScreen": (context) => const SplashScreen(),
+          "/LoginScreen": (context) => const LoginScreen(),
+          "/registerScreen": (context) => const RegisterScreen(),
         },
       ),
     );

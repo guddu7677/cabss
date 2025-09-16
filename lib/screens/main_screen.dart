@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart' hide LocationAccuracy;
+import 'package:location/location.dart' as loc;
 import 'package:our_cabss/assistents/assistent_method.dart';
 import 'package:our_cabss/infoHandler/app_info.dart';
 import 'package:our_cabss/models/direction_details_info.dart';
+import 'package:our_cabss/screens/pecise_pickup_location.dart';
 import 'package:our_cabss/services/auth_serviece.dart';
 import 'package:our_cabss/widgets/progress_dilog.dart';
 import 'package:provider/provider.dart';
@@ -22,11 +25,17 @@ class _MainScreenState extends State<MainScreen> {
   GoogleMapController? newGoogleMapController;
   String? userName = "";
   String? userEmail = "";
+  LatLng? pickUpLocation;
+
+  loc.Location location = loc.Location();
+
+  String? address = "";
 
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(25.5941, 85.1376),
     zoom: 14.0,
   );
+  GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
   Position? userCurrentPosition;
   LocationPermission? _locationPermission;
@@ -89,8 +98,7 @@ class _MainScreenState extends State<MainScreen> {
         userCurrentPosition!,
         context,
       );
-      
-      // Safe null check for user info
+
       if (userModelCurrentInfo != null) {
         userName = userModelCurrentInfo!.name ?? "";
         userEmail = userModelCurrentInfo!.email ?? "";
@@ -105,7 +113,6 @@ class _MainScreenState extends State<MainScreen> {
     var originPosition = appInfo.userPickUpLocation;
     var destinationPosition = appInfo.userDropOffLocation;
 
-    // Check if both locations are available
     if (originPosition == null || destinationPosition == null) {
       print("Origin or destination position is null");
       return;
@@ -123,15 +130,16 @@ class _MainScreenState extends State<MainScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) => ProgressDilog(message: "Please wait..."),
+      builder: (BuildContext context) =>
+          ProgressDilog(message: "Please wait..."),
     );
 
     try {
       var directionDetailsInfo =
           await AssistentMethod.obtainOriginToDestinationDirectionDetails(
-        originLatLng,
-        destinationLatLng,
-      );
+            originLatLng,
+            destinationLatLng,
+          );
 
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
@@ -146,16 +154,19 @@ class _MainScreenState extends State<MainScreen> {
         tripDirectionDetailsInfo = directionDetailsInfo;
       });
 
-      PolylinePoints pPoints = PolylinePoints(apiKey: 'AIzaSyCeUvUpxCAYciJZ4blCtMm7snAM8ODvmg4');
+      PolylinePoints pPoints = PolylinePoints(
+        apiKey: 'AIzaSyCeUvUpxCAYciJZ4blCtMm7snAM8ODvmg4',
+      );
       List<PointLatLng> decodedPolyLinePointsResultList =
           PolylinePoints.decodePolyline(directionDetailsInfo.encodedPoints!);
 
       polyLineCoordinatesList.clear();
-      
+
       if (decodedPolyLinePointsResultList.isNotEmpty) {
         for (var pointLatLng in decodedPolyLinePointsResultList) {
-          polyLineCoordinatesList
-              .add(LatLng(pointLatLng.latitude, pointLatLng.longitude));
+          polyLineCoordinatesList.add(
+            LatLng(pointLatLng.latitude, pointLatLng.longitude),
+          );
         }
       }
 
@@ -200,10 +211,8 @@ class _MainScreenState extends State<MainScreen> {
       });
 
       _fitMarkersInCamera(originLatLng, destinationLatLng);
-
     } catch (e) {
       print("Error drawing polyline: $e");
-      // Close loading dialog if still open
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
@@ -212,7 +221,7 @@ class _MainScreenState extends State<MainScreen> {
 
   void _fitMarkersInCamera(LatLng originLatLng, LatLng destinationLatLng) {
     LatLngBounds bounds;
-    
+
     if (originLatLng.latitude > destinationLatLng.latitude &&
         originLatLng.longitude > destinationLatLng.longitude) {
       bounds = LatLngBounds(
@@ -260,7 +269,9 @@ class _MainScreenState extends State<MainScreen> {
               pickupLocation.locationLatitude!,
               pickupLocation.locationLongitude!,
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueGreen,
+            ),
             infoWindow: InfoWindow(
               title: "Pickup Location",
               snippet: pickupLocation.locationName,
@@ -278,7 +289,9 @@ class _MainScreenState extends State<MainScreen> {
               dropOffLocation.locationLatitude!,
               dropOffLocation.locationLongitude!,
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueRed,
+            ),
             infoWindow: InfoWindow(
               title: "Drop Off Location",
               snippet: dropOffLocation.locationName,
@@ -353,14 +366,13 @@ class _MainScreenState extends State<MainScreen> {
             zoomGesturesEnabled: true,
             zoomControlsEnabled: true,
             markers: markersSet,
-            polylines: polyLineSet, 
+            polylines: polyLineSet,
             onMapCreated: (GoogleMapController controller) {
               _controllerGoogleMap.complete(controller);
               newGoogleMapController = controller;
               locateUserPosition();
             },
           ),
-
           Positioned(
             left: 0,
             right: 0,
@@ -391,16 +403,24 @@ class _MainScreenState extends State<MainScreen> {
                             .userPickUpLocation
                             ?.locationName ??
                         "Getting current location...",
-                    onTap: null,
+                    onTap: () async {
+                      var result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (c) => PecisePickupLocationScreen(),
+                        ),
+                      );
+                      if (result != null) {
+                        updateMapWithLocations();
+                      }
+                    },
                   ),
-
                   const SizedBox(height: 8),
                   Divider(
                     color: darkTheme ? Colors.amber.shade400 : Colors.blue,
                     thickness: 1,
                   ),
                   const SizedBox(height: 8),
-
                   _buildLocationRow(
                     icon: Icons.location_on,
                     label: "To",
@@ -418,6 +438,79 @@ class _MainScreenState extends State<MainScreen> {
                         await drawPolyLineFromOriginToDestination(darkTheme);
                       }
                     },
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            var result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (c) => PecisePickupLocationScreen(),
+                              ),
+                            );
+                            if (result != null) {
+                              updateMapWithLocations();
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: darkTheme ? Colors.grey.shade700 : Colors.grey.shade300,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            "Change Pickup",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: darkTheme ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            var appInfo = Provider.of<AppInfo>(context, listen: false);
+                            if (appInfo.userPickUpLocation != null && 
+                                appInfo.userDropOffLocation != null) {
+                              Navigator.pushNamed(context, "/RequestRideScreen");
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "Please select both pickup and destination locations",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: darkTheme ? Colors.amber : Colors.blue,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            "Request Ride",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: darkTheme ? Colors.black : Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
