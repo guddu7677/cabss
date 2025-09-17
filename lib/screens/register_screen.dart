@@ -48,12 +48,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           DatabaseReference userRef =
               FirebaseDatabase.instance.ref().child("users");
 
-          // save data to Realtime Database
           userRef.child(currentUser.uid).set(userDataMap);
 
           Fluttertoast.showToast(msg: "Registration Successful");
 
-          Navigator.pushReplacementNamed(context, "/LoginScreen"); // or MainPage()
+          Navigator.pushReplacementNamed(context, "/LoginScreen"); 
         } else {
           Fluttertoast.showToast(msg: "Error: User is null");
         }

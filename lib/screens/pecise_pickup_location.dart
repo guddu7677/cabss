@@ -30,7 +30,7 @@ class _PecisePickupLocationScreenState
     zoom: 14.0,
   );
 
-  GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+  GlobalKey<ScaffoldState> _scaffoldState = GlobalKey<ScaffoldState>();
   Position? userCurrentPosition;
   LocationPermission? _locationPermission;
   double bottomPaddingOfMap = 0;
@@ -196,7 +196,7 @@ class _PecisePickupLocationScreenState
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding:  EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: darkTheme ? Colors.grey.shade800 : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
@@ -220,7 +220,7 @@ class _PecisePickupLocationScreenState
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                   SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -233,7 +233,7 @@ class _PecisePickupLocationScreenState
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: darkTheme ? Colors.amber : Colors.blue,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding:  EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),

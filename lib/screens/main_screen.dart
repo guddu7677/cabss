@@ -8,6 +8,7 @@ import 'package:location/location.dart' as loc;
 import 'package:our_cabss/assistents/assistent_method.dart';
 import 'package:our_cabss/infoHandler/app_info.dart';
 import 'package:our_cabss/models/direction_details_info.dart';
+import 'package:our_cabss/screens/drawer_screen.dart';
 import 'package:our_cabss/screens/pecise_pickup_location.dart';
 import 'package:our_cabss/services/auth_serviece.dart';
 import 'package:our_cabss/widgets/progress_dilog.dart';
@@ -35,7 +36,7 @@ class _MainScreenState extends State<MainScreen> {
     target: LatLng(25.5941, 85.1376),
     zoom: 14.0,
   );
-  GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+  GlobalKey<ScaffoldState> _scaffoldState = GlobalKey<ScaffoldState>();
 
   Position? userCurrentPosition;
   LocationPermission? _locationPermission;
@@ -355,168 +356,210 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     darkTheme = MediaQuery.of(context).platformBrightness == Brightness.dark;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          GoogleMap(
-            mapType: MapType.normal,
-            myLocationButtonEnabled: true,
-            initialCameraPosition: _kGooglePlex,
-            myLocationEnabled: true,
-            zoomGesturesEnabled: true,
-            zoomControlsEnabled: true,
-            markers: markersSet,
-            polylines: polyLineSet,
-            onMapCreated: (GoogleMapController controller) {
-              _controllerGoogleMap.complete(controller);
-              newGoogleMapController = controller;
-              locateUserPosition();
-            },
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: darkTheme ? Colors.black87 : Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        key: _scaffoldState,
+        drawer: DrawerScreen(),
+        body: Stack(
+          children: [
+            GoogleMap(
+              mapType: MapType.normal,
+              myLocationButtonEnabled: true,
+              initialCameraPosition: _kGooglePlex,
+              myLocationEnabled: true,
+              zoomGesturesEnabled: true,
+              zoomControlsEnabled: true,
+              markers: markersSet,
+              polylines: polyLineSet,
+              onMapCreated: (GoogleMapController controller) {
+                _controllerGoogleMap.complete(controller);
+                newGoogleMapController = controller;
+                locateUserPosition();
+              },
+            ),
+
+            Positioned(
+              top: 50,
+              left: 20,
+              child: Container(
+                child: GestureDetector(
+                  child: CircleAvatar(
+                    backgroundColor: darkTheme
+                        ? Colors.amber.shade400
+                        : Colors.white,
+                    child: Icon(
+                      Icons.menu,
+                      color: darkTheme ? Colors.black : Colors.lightBlue,
+                    ),
+                  ),
+                  onTap: () {
+                    _scaffoldState.currentState!.openDrawer();
+                  },
                 ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildLocationRow(
-                    icon: Icons.my_location,
-                    label: "From",
-                    address: Provider.of<AppInfo>(context)
-                            .userPickUpLocation
-                            ?.locationName ??
-                        "Getting current location...",
-                    onTap: () async {
-                      var result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (c) => PecisePickupLocationScreen(),
-                        ),
-                      );
-                      if (result != null) {
-                        updateMapWithLocations();
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Divider(
-                    color: darkTheme ? Colors.amber.shade400 : Colors.blue,
-                    thickness: 1,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildLocationRow(
-                    icon: Icons.location_on,
-                    label: "To",
-                    address: Provider.of<AppInfo>(context)
-                            .userDropOffLocation
-                            ?.locationName ??
-                        "Where to?",
-                    onTap: () async {
-                      var result = await Navigator.pushNamed(
-                        context,
-                        "/SearchPlacesScreen",
-                      );
-                      if (result == "obtainedDropOff") {
-                        updateMapWithLocations();
-                        await drawPolyLineFromOriginToDestination(darkTheme);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            var result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (c) => PecisePickupLocationScreen(),
-                              ),
-                            );
-                            if (result != null) {
-                              updateMapWithLocations();
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: darkTheme ? Colors.grey.shade700 : Colors.grey.shade300,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            "Change Pickup",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: darkTheme ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            var appInfo = Provider.of<AppInfo>(context, listen: false);
-                            if (appInfo.userPickUpLocation != null && 
-                                appInfo.userDropOffLocation != null) {
-                              Navigator.pushNamed(context, "/RequestRideScreen");
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    "Please select both pickup and destination locations",
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  backgroundColor: Colors.red,
-                                  duration: Duration(seconds: 3),
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: darkTheme ? Colors.amber : Colors.blue,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            "Request Ride",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: darkTheme ? Colors.black : Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: darkTheme ? Colors.black87 : Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                  boxShadow:  [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildLocationRow(
+                      icon: Icons.my_location,
+                      label: "From",
+                      address:
+                          Provider.of<AppInfo>(
+                            context,
+                          ).userPickUpLocation?.locationName ??
+                          "Getting current location...",
+                      onTap: () async {
+                        var result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (c) => PecisePickupLocationScreen(),
+                          ),
+                        );
+                        if (result != null) {
+                          updateMapWithLocations();
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(
+                      color: darkTheme ? Colors.amber.shade400 : Colors.blue,
+                      thickness: 1,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildLocationRow(
+                      icon: Icons.location_on,
+                      label: "To",
+                      address:
+                          Provider.of<AppInfo>(
+                            context,
+                          ).userDropOffLocation?.locationName ??
+                          "Where to?",
+                      onTap: () async {
+                        var result = await Navigator.pushNamed(
+                          context,
+                          "/SearchPlacesScreen",
+                        );
+                        if (result == "obtainedDropOff") {
+                          updateMapWithLocations();
+                          await drawPolyLineFromOriginToDestination(darkTheme);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              var result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (c) => PecisePickupLocationScreen(),
+                                ),
+                              );
+                              if (result != null) {
+                                updateMapWithLocations();
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: darkTheme
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade300,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              "Change Pickup",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: darkTheme
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              var appInfo = Provider.of<AppInfo>(
+                                context,
+                                listen: false,
+                              );
+                              if (appInfo.userPickUpLocation != null &&
+                                  appInfo.userDropOffLocation != null) {
+                                Navigator.pushNamed(
+                                  context,
+                                  "/RequestRideScreen",
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Please select both pickup and destination locations",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: darkTheme
+                                  ? Colors.amber
+                                  : Colors.blue,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              "Request Ride",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: darkTheme ? Colors.black : Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
