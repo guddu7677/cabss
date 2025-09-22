@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart' as loc;
-import 'package:our_cabss/assistents/assistent_method.dart';
+import 'package:our_cabss/assistants/assistant_method.dart';
 import 'package:our_cabss/infoHandler/app_info.dart';
 import 'package:our_cabss/services/auth_serviece.dart';
 import 'package:provider/provider.dart';

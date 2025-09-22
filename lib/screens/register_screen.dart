@@ -3,7 +3,6 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-// import 'package:our_cabs/services/auth_service.dart'; // only if you need custom logic
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

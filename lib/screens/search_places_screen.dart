@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:our_cabss/assistents/request_assistent.dart';
+import 'package:our_cabss/assistants/request_assistant.dart';
 import 'package:our_cabss/models/predicted_places.dart';
 import 'package:our_cabss/services/map_key.dart';
 import 'package:our_cabss/widgets/place_prediction_tile.dart';

@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_geofire/flutter_geofire.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:location/location.dart' as loc;
-import 'package:our_cabss/assistents/assistent_method.dart';
+import 'package:our_cabss/assistants/assistant_method.dart';
+import 'package:our_cabss/assistants/geofire_assistant.dart';
 import 'package:our_cabss/infoHandler/app_info.dart';
+import 'package:our_cabss/models/active_nearby_availble_drivers.dart';
 import 'package:our_cabss/models/direction_details_info.dart';
 import 'package:our_cabss/screens/drawer_screen.dart';
 import 'package:our_cabss/screens/pecise_pickup_location.dart';
@@ -44,6 +47,8 @@ class _MainScreenState extends State<MainScreen> {
   bool darkTheme = false;
   List<LatLng> polyLineCoordinatesList = [];
   Set<Polyline> polyLineSet = {};
+  BitmapDescriptor? activeNearbyIcon;
+  bool activeNearbyDriverKeysLoaded = false;
 
   @override
   void initState() {
@@ -103,9 +108,100 @@ class _MainScreenState extends State<MainScreen> {
       if (userModelCurrentInfo != null) {
         userName = userModelCurrentInfo!.name ?? "";
         userEmail = userModelCurrentInfo!.email ?? "";
+
+        initiallizeGeoFireListener();
       }
     } catch (e) {
       print("Error getting location: $e");
+    }
+  }
+
+  initiallizeGeoFireListener() {
+    Geofire.initialize("activeDrivers");
+    Geofire.queryAtLocation(
+      userCurrentPosition!.latitude,
+      userCurrentPosition!.longitude,
+      10,
+    )!.listen((map) {
+      print(map);
+      if (map != null) {
+        var callBack = map["callBack"];
+        switch (callBack) {
+          case Geofire.onKeyEntered:
+            ActiveNearByAvailbleDrivers activeNearByAvailbleDrivers =
+                ActiveNearByAvailbleDrivers();
+            activeNearByAvailbleDrivers.locationLatitde = map["latitude"];
+            activeNearByAvailbleDrivers.locationLongitude = map["longitude"];
+            activeNearByAvailbleDrivers.driverId = map["key"];
+            GeofireAssistant.activeNearByAvailbleDriversList.add(
+              activeNearByAvailbleDrivers,
+            );
+            if (activeNearbyDriverKeysLoaded == true) {
+              displayActiveDriversOnUserMap();
+            }
+            break;
+          case Geofire.onKeyExited:
+            GeofireAssistant.deleteOfflineDriverFromList(map["key"]);
+            displayActiveDriversOnUserMap();
+            break;
+          case Geofire.onKeyMoved:
+            ActiveNearByAvailbleDrivers activeNearByAvailbleDrivers =
+                ActiveNearByAvailbleDrivers();
+            activeNearByAvailbleDrivers.locationLatitde = map["latitude"];
+            activeNearByAvailbleDrivers.locationLongitude = map["longitude"];
+            activeNearByAvailbleDrivers.driverId = map["key"];
+            GeofireAssistant.updateNearByAvailbleDriverLocation(
+              activeNearByAvailbleDrivers,
+            );
+            displayActiveDriversOnUserMap();
+            break;
+          case Geofire.onGeoQueryReady:
+            activeNearbyDriverKeysLoaded = true;
+            displayActiveDriversOnUserMap();
+            break;
+        }
+      }
+      setState(() {});
+    });
+  }
+
+  displayActiveDriversOnUserMap() {
+    setState(() {
+      markersSet.clear();
+
+      Set<Marker> driversMarkerSet = Set<Marker>();
+      for (ActiveNearByAvailbleDrivers eachDriver
+          in GeofireAssistant.activeNearByAvailbleDriversList) {
+        LatLng eachDriverActivePosition = LatLng(
+          eachDriver.locationLatitde!,
+          eachDriver.locationLongitude!,
+        );
+        Marker marker = Marker(
+          markerId: MarkerId(eachDriver.driverId!),
+          position: eachDriverActivePosition,
+          icon: activeNearbyIcon!,
+          rotation: 360,
+        );
+        driversMarkerSet.add(marker);
+      }
+      setState(() {
+        markersSet = driversMarkerSet;
+      });
+    });
+  }
+
+  createActiveNearByDriverIconMarker() {
+    if (activeNearbyIcon == null) {
+      ImageConfiguration imageConfiguration = createLocalImageConfiguration(
+        context,
+        size: Size(2, 2),
+      );
+      BitmapDescriptor.fromAssetImage(
+        imageConfiguration,
+        "assets/images/car.jpg",
+      ).then((value) {
+        activeNearbyIcon = value;
+      });
     }
   }
 
@@ -413,7 +509,7 @@ class _MainScreenState extends State<MainScreen> {
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
                   ),
-                  boxShadow:  [
+                  boxShadow: [
                     BoxShadow(
                       color: Colors.black26,
                       blurRadius: 10,

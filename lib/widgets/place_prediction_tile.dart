@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:our_cabss/assistents/request_assistent.dart';
+import 'package:our_cabss/assistants/request_assistant.dart';
 import 'package:our_cabss/infoHandler/app_info.dart';
 import 'package:our_cabss/models/direction.dart';
 import 'package:our_cabss/models/predicted_places.dart';
@@ -17,7 +17,6 @@ class PlacePredictionTileDesion extends StatelessWidget {
   Future<void> getPlaceDirectionDetails(String? placeId, BuildContext context) async {
     if (placeId == null) return;
 
-    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -33,7 +32,6 @@ class PlacePredictionTileDesion extends StatelessWidget {
 
       var responseApi = await RequestAssistant.receiveRequest(placeDirectionsDetailsUrl);
 
-      // Close loading dialog
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }

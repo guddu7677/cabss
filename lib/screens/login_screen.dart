@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:our_cabss/services/auth_serviece.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,7 +25,22 @@ class _LoginScreenState extends State<LoginScreen> {
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
-      );
+      ) .then((auth) async {
+        DatabaseReference userRef = FirebaseDatabase.instance.ref().child("users");
+        userRef.child(firebaseAuth.currentUser!.uid).once().then((value) async {
+          final snap = value.snapshot;
+          if (snap.value != null) {
+            currentUser = auth.user;
+            await Fluttertoast.showToast(msg: "Successfully Logged In");
+            Navigator.pushReplacementNamed(context, "/SplashScreen");
+          } else {
+            await Fluttertoast.showToast(msg: "No record exists with this email");
+            firebaseAuth.signOut();
+            Navigator.pushReplacementNamed(context, "/SplashScreen");
+          }
+        });
+      });
+
 
       if (userCredential.user != null) {
         Fluttertoast.showToast(msg: "Login Successful");

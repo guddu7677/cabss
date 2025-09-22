@@ -1,7 +1,7 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:our_cabss/assistents/request_assistent.dart';
+import 'package:our_cabss/assistants/request_assistant.dart';
 import 'package:our_cabss/infoHandler/app_info.dart';
 import 'package:our_cabss/models/direction.dart';
 import 'package:our_cabss/models/direction_details_info.dart';

@@ -47,7 +47,7 @@ class OurCabss extends StatelessWidget {
           "/SearchPlacesScreen": (context) => const SearchPlacesScreen(),
           "/SplashScreen": (context) => const SplashScreen(),
           "/LoginScreen": (context) => const LoginScreen(),
-          "/registerScreen": (context) => const RegisterScreen(),
+          "/RegisterScreen": (context) => const RegisterScreen(),
         },
       ),
     );
