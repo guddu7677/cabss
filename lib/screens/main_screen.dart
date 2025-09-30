@@ -603,56 +603,75 @@ class _MainScreenState extends State<MainScreen> {
     searchNearestOnlineDrivers(selectedVehicleType);
   }
 
-  searchNearestOnlineDrivers(String selectedVehicleType) async {
-    if (onlineNearByAvailbleDriversList.length == 0) {
-      referenceRideRequest!.remove();
-      setState(() {
-        polyLineSet.clear();
-        markersSet.clear();
-        circleSet.clear();
-        polyLineCoordinatesList.clear();
-      });
-      Fluttertoast.showToast(msg: "No Online nearest Drivers Availble");
-      Fluttertoast.showToast(msg: "Search Again. \n Restarting app.");
-      Future.delayed(Duration(milliseconds: 4000), () {
-        referenceRideRequest!.remove();
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (c) => SplashScreen()),
-        );
-      });
-      return;
-    }
-    await retrieveOnlineDriversInformation(onlineNearByAvailbleDriversList);
+ // Replace the searchNearestOnlineDrivers method in your main_screen.dart with this fixed version:
 
-    print("Driver List;" + driversList.toString());
-    for (int i = 0; i < driversList.length; i++) {
-      if (driversList[i]["car_details"]["type"] == selectedVehicleType) {
-        AssistentMethod.sendNotificationToDriverNow(
-          driversList[i]["token"],
-          referenceRideRequest!.key!,
-          context,
-        );
+searchNearestOnlineDrivers(String selectedVehicleType) async {
+  if (onlineNearByAvailbleDriversList.length == 0) {
+    referenceRideRequest!.remove();
+    setState(() {
+      polyLineSet.clear();
+      markersSet.clear();
+      circleSet.clear();
+      polyLineCoordinatesList.clear();
+    });
+    Fluttertoast.showToast(msg: "No Online nearest Drivers Available");
+    Fluttertoast.showToast(msg: "Search Again. \n Restarting app.");
+    Future.delayed(Duration(milliseconds: 4000), () {
+      referenceRideRequest!.remove();
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (c) => SplashScreen()),
+      );
+    });
+    return;
+  }
+  
+  await retrieveOnlineDriversInformation(onlineNearByAvailbleDriversList);
+
+  print("Driver List: " + driversList.toString());
+  
+  // FIX: Add null checks before accessing nested map data
+  for (int i = 0; i < driversList.length; i++) {
+    // Check if driver data exists and is not null
+    if (driversList[i] != null) {
+      // Check if car_details exists
+      var carDetails = driversList[i]["car_details"];
+      if (carDetails != null && carDetails is Map) {
+        // Check if type exists in car_details
+        var vehicleType = carDetails["type"];
+        if (vehicleType != null && vehicleType == selectedVehicleType) {
+          // Check if token exists before sending notification
+          var token = driversList[i]["token"];
+          if (token != null) {
+            AssistentMethod.sendNotificationToDriverNow(
+              token,
+              referenceRideRequest!.key!,
+              context,
+            );
+          }
+        }
       }
     }
-    Fluttertoast.showToast(msg: "Notification send successfully");
-    showSearchingForDriversContainer();
-    await FirebaseDatabase.instance
-        .ref()
-        .child("All Ride Reqeasts")
-        .child(referenceRideRequest!.key!)
-        .child("driverId")
-        .onValue
-        .listen((eventRideRequeastSnapshot) {
-          print("EventSnapshot:${eventRideRequeastSnapshot.snapshot.value}");
-          if (eventRideRequeastSnapshot.snapshot.value != null) {
-            if (eventRideRequeastSnapshot.snapshot.value != "waiting") {
-              showUIForAssignedDriverInfo();
-            }
-          }
-        });
   }
-
+  
+  Fluttertoast.showToast(msg: "Notification sent successfully");
+  showSearchingForDriversContainer();
+  
+  await FirebaseDatabase.instance
+      .ref()
+      .child("All Ride Requests")  
+      .child(referenceRideRequest!.key!)
+      .child("driverId")
+      .onValue
+      .listen((eventRideRequestSnapshot) {
+        print("EventSnapshot: ${eventRideRequestSnapshot.snapshot.value}");
+        if (eventRideRequestSnapshot.snapshot.value != null) {
+          if (eventRideRequestSnapshot.snapshot.value != "waiting") {
+            showUIForAssignedDriverInfo();
+          }
+        }
+      });
+}
   showUIForAssignedDriverInfo() {
     waitingResponcefrommDriverHeight = 200;
     searchLocationContainerHeight = 0;
