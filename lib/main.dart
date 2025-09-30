@@ -6,6 +6,7 @@ import 'package:our_cabss/screens/main_screen.dart';
 import 'package:our_cabss/screens/register_screen.dart';
 import 'package:our_cabss/screens/search_places_screen.dart';
 import 'package:our_cabss/splash_screen/splash_screen.dart';
+import 'package:our_cabss/widgets/pay_fare_amount.dart';
 import 'package:provider/provider.dart';
 
 Future<void> main() async {
@@ -41,13 +42,15 @@ class OurCabss extends StatelessWidget {
         ),
         themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
-        home: const RegisterScreen(),
+        home:  LoginScreen(),
         routes: {
           "/MainScreen": (context) => const MainScreen(),
           "/SearchPlacesScreen": (context) => const SearchPlacesScreen(),
           "/SplashScreen": (context) => const SplashScreen(),
           "/LoginScreen": (context) => const LoginScreen(),
           "/RegisterScreen": (context) => const RegisterScreen(),
+                    "/PayFareAmountDilog": (context) =>  PayFareAmountDilog(),
+
         },
       ),
     );

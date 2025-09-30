@@ -15,10 +15,10 @@ class GeofireAssistant {
     int indexNumber = activeNearByAvailbleDriversList.indexWhere(
       (element) => element.driverId == driverWhoMove.driverId,
     );
-    activeNearByAvailbleDriversList[indexNumber].locationLatitde =
-        driverWhoMove.locationLatitde;
+    activeNearByAvailbleDriversList[indexNumber].locationLatitude =
+        driverWhoMove.locationLatitude;
     activeNearByAvailbleDriversList[indexNumber].locationLongitude =
-        driverWhoMove.locationLatitde;
+        driverWhoMove.locationLatitude;
         
   }
 }
