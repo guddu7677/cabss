@@ -16,40 +16,42 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      // 🔑 Sign in user
+      UserCredential userCredential = await firebaseAuth.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
-      ) .then((auth) async {
-        DatabaseReference userRef = FirebaseDatabase.instance.ref().child("users");
-        userRef.child(firebaseAuth.currentUser!.uid).once().then((value) async {
-          final snap = value.snapshot;
-          if (snap.value != null) {
-            currentUser = auth.user;
-            await Fluttertoast.showToast(msg: "Successfully Logged In");
-            Navigator.pushReplacementNamed(context, "/SplashScreen");
-          } else {
-            await Fluttertoast.showToast(msg: "No record exists with this email");
-            firebaseAuth.signOut();
-            Navigator.pushReplacementNamed(context, "/SplashScreen");
-          }
-        });
-      });
+      );
 
+      User? firebaseUser = userCredential.user;
 
-      if (userCredential.user != null) {
-        Fluttertoast.showToast(msg: "Login Successful");
-        Navigator.pushReplacementNamed(context, "/SplashScreen"); 
+      if (firebaseUser != null) {
+        // 🔑 Check if user exists in Realtime Database
+        DatabaseReference userRef = FirebaseDatabase.instance
+            .ref()
+            .child("users")
+            .child(firebaseUser.uid);
+
+        DatabaseEvent event = await userRef.once();
+
+        if (event.snapshot.value != null) {
+          // ✅ user record found
+          currentUser = firebaseUser;
+          Fluttertoast.showToast(msg: "Successfully Logged In");
+          Navigator.pushReplacementNamed(context, "/SplashScreen");
+        } else {
+          // ❌ no user record found
+          Fluttertoast.showToast(msg: "No record exists with this email");
+          await firebaseAuth.signOut();
+        }
       } else {
         Fluttertoast.showToast(msg: "Error: User is null");
       }
     } on FirebaseAuthException catch (e) {
-      Fluttertoast.showToast(msg: "Error: ${e.message}");
+      Fluttertoast.showToast(msg: "Auth Error: ${e.message}");
     } catch (e) {
       Fluttertoast.showToast(msg: "Error: $e");
     }
@@ -61,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     try {
-      await _auth.sendPasswordResetEmail(email: emailController.text.trim());
+      await firebaseAuth.sendPasswordResetEmail(email: emailController.text.trim());
       Fluttertoast.showToast(msg: "Password reset email sent");
     } on FirebaseAuthException catch (e) {
       Fluttertoast.showToast(msg: "Error: ${e.message}");
@@ -70,8 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool darkTheme =
-        MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final bool darkTheme = MediaQuery.of(context).platformBrightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -79,12 +80,6 @@ class _LoginScreenState extends State<LoginScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Image.asset(
-            //   darkTheme
-            //       ? 'assets/images/ncity.jpeg'
-            //       : 'assets/images/cittyr.webp',
-            //   height: 150,
-            // ),
             const SizedBox(height: 16),
             Text(
               'Login',
@@ -126,9 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, "/ForgetPasswordScreen");
-                      },
+                      onTap: _resetPassword,
                       child: Text(
                         "Forgot Password?",
                         style: TextStyle(
